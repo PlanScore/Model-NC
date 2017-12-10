@@ -1,3 +1,9 @@
+NC-Precinct-Model.NC-House.votes.geojson
+NC-Precinct-Model.NC-Senate.votes.geojson
+NC-Precinct-Model.US-House.votes.geojson
+
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

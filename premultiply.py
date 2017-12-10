@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-import csv, sys, statistics, gzip
+import csv, sys, statistics, gzip, argparse
 
-filename1, filename2, filename3 = sys.argv[1:]
+parser = argparse.ArgumentParser(description='Premultiply votes')
+parser.add_argument('filename1', help='Tabular CSV file with Democrat vote proportion')
+parser.add_argument('filename2', help='Tabular CSV file with estimated turnout')
+parser.add_argument('filename3', help='Output CSV file with party vote totals')
 
-with gzip.open(filename1, 'rt') as file1, gzip.open(filename2, 'rt') as file2:
+args = parser.parse_args()
+
+with gzip.open(args.filename1, 'rt') as file1, gzip.open(args.filename2, 'rt') as file2:
     rows1 = csv.reader(file1)
     rows2 = csv.reader(file2)
     
@@ -12,7 +17,7 @@ with gzip.open(filename1, 'rt') as file1, gzip.open(filename2, 'rt') as file2:
     if head1[:4] != head2[:4] or len(head1) != 1004 or len(head2) != 1004:
         raise Exception()
     
-    with gzip.open(filename3, 'wt') as file3:
+    with gzip.open(args.filename3, 'wt') as file3:
         columns = ['county', 'precinct', 'psid']
         for i in range(1000):
             columns += [f'DEM{i:03d}', f'REP{i:03d}']
