@@ -6,8 +6,9 @@ logging.basicConfig(stream=sys.stderr, level=logging.INFO, format='%(levelname)0
 
 parser = argparse.ArgumentParser(description='Merge layers and votes')
 parser.add_argument('geo_name', help='Spatial file with layers and areas')
+parser.add_argument('votes_name', help='Tabular CSV file with vote counts')
 parser.add_argument('acs_name', help='Tabular CSV file with ACS population')
-parser.add_argument('votecsv_name', help='Tabular CSV file with vote counts')
+parser.add_argument('model_name', help='Tabular CSV file with model vote counts')
 parser.add_argument('out_name', help='Output GeoJSON file with areas and votes')
 
 args = parser.parse_args()
@@ -37,20 +38,29 @@ with open(args.acs_name, 'r') as acs_file:
         populations[geoid]['Voting-Age Population 2015, Error'] = round(math.sqrt(sum(vpop_var)))
         
 logging.info('Read population for {} areas.'.format(len(populations)))
-logging.info('Reading vote counts from {}...'.format(args.votecsv_name))
+logging.info('Reading model vote counts from {}...'.format(args.model_name))
 
 votes = collections.defaultdict(lambda: collections.defaultdict(float))
-column_pattern = re.compile(r'^(DEM|REP)\d+$')
+model_pattern = re.compile(r'^(DEM|REP)\d+$')
 
-with gzip.open(args.votecsv_name, 'rt') as file2:
-    rows = csv.DictReader(file2)
-    
-    for row in rows:
-        #break
+with gzip.open(args.model_name, 'rt') as file2:
+    for row in csv.DictReader(file2):
         psid = int(row['psid'].split(':', 2)[1])
         for (key, value) in row.items():
-            if column_pattern.match(key):
+            if model_pattern.match(key):
                 votes[psid][key] += float(value)
+
+logging.info('Reading other vote counts from {}...'.format(args.votes_name))
+votes_pattern = re.compile(r'.* - (DEM|REP)$')
+
+with gzip.open(args.votes_name, 'rt') as votes_file:
+    for row in csv.DictReader(votes_file):
+        if ':' not in row['PSID']:
+            continue
+        psid = int(row['PSID'].split(':', 2)[1])
+        for (key, value) in row.items():
+            if votes_pattern.match(key):
+                votes[psid][key] += int(value)
 
 logging.info('Read counts for {} areas.'.format(len(votes)))
 logging.info('Reading areas from {}...'.format(args.geo_name))
@@ -69,8 +79,9 @@ for layer in (ds.GetLayer('counties'), ds.GetLayer('precincts')):
     for feature in layer:
         feature_json = json.loads(feature.ExportToJson())
         properties = feature_json['properties']
-        properties.update({key: round(value, 1) for (key, value)
-            in votes[properties['psid']].items() if column_pattern.match(key)})
+        properties.update({key: round(value, 1)
+            for (key, value) in votes[properties['psid']].items()
+            if model_pattern.match(key) or votes_pattern.match(key)})
         features_json.append(json.dumps(feature_json, sort_keys=True))
 
 logging.info('Read {} areas.'.format(len(features_json)))
