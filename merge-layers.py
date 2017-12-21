@@ -75,7 +75,7 @@ for feature in ds.GetLayer('tracts'):
     properties.update(populations[f'14000US{feature_geoid}'])
     features_json.append(json.dumps(feature_json, sort_keys=True))
 
-for layer in (ds.GetLayer('counties'), ds.GetLayer('precincts')):
+for layer in (ds.GetLayer('precincts'), ):
     for feature in layer:
         feature_json = json.loads(feature.ExportToJson())
         properties = feature_json['properties']
