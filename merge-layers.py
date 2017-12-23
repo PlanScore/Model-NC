@@ -13,6 +13,16 @@ parser.add_argument('out_name', help='Output GeoJSON file with areas and votes')
 
 args = parser.parse_args()
 
+logging.info('Reading county/precinct populations from {}...'.format('precinct-county-fractions.csv'))
+
+county_precincts = collections.defaultdict(lambda: collections.defaultdict(float))
+
+with open('precinct-county-fractions.csv', 'r') as frac_file:
+    rows = csv.DictReader(frac_file)
+    for row in rows:
+        county_psid, precinct_psid = int(row['county_psid']), int(row['precinct_psid'])
+        county_precincts[county_psid][precinct_psid] += float(row['fraction'])
+
 logging.info('Reading ACS population from {}...'.format(args.acs_name))
 
 populations = collections.defaultdict(lambda: collections.defaultdict(int))
@@ -67,6 +77,16 @@ logging.info('Reading areas from {}...'.format(args.geo_name))
 
 ds = ogr.Open(args.geo_name)
 features_json = list()
+precinct_counts = collections.defaultdict(lambda: collections.defaultdict(float))
+
+for feature in ds.GetLayer('counties'):
+    feature_json = json.loads(feature.ExportToJson())
+    properties = feature_json['properties']
+    county_psid = properties['psid']
+    for (key, value) in votes[county_psid].items():
+        if model_pattern.match(key) or votes_pattern.match(key):
+            for (precinct_psid, fraction) in county_precincts[county_psid].items():
+                precinct_counts[precinct_psid][key] += fraction * value
 
 for feature in ds.GetLayer('tracts'):
     feature_json = json.loads(feature.ExportToJson())
@@ -79,9 +99,12 @@ for layer in (ds.GetLayer('precincts'), ):
     for feature in layer:
         feature_json = json.loads(feature.ExportToJson())
         properties = feature_json['properties']
-        properties.update({key: round(value, 1)
-            for (key, value) in votes[properties['psid']].items()
-            if model_pattern.match(key) or votes_pattern.match(key)})
+        precinct_psid = properties['psid']
+        for key in votes[precinct_psid].keys():
+            if model_pattern.match(key) or votes_pattern.match(key):
+                precinct_count = votes[precinct_psid][key]
+                county_part = precinct_counts[precinct_psid][key]
+                properties[key] = round(precinct_count + county_part, 1)
         features_json.append(json.dumps(feature_json, sort_keys=True))
 
 logging.info('Read {} areas.'.format(len(features_json)))
