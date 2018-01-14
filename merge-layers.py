@@ -8,6 +8,7 @@ parser = argparse.ArgumentParser(description='Merge layers and votes')
 parser.add_argument('geo_name', help='Spatial file with layers and areas')
 parser.add_argument('votes_name', help='Tabular CSV file with vote counts')
 parser.add_argument('acs_name', help='Tabular CSV file with ACS population')
+parser.add_argument('census_name', help='Tabular CSV file with Census population')
 parser.add_argument('model_name', help='Tabular CSV file with model vote counts')
 parser.add_argument('out_name', help='Output GeoJSON file with areas and votes')
 
@@ -73,11 +74,29 @@ with gzip.open(args.votes_name, 'rt') as votes_file:
                 votes[psid][key] += int(value)
 
 logging.info('Read counts for {} areas.'.format(len(votes)))
-logging.info('Reading areas from {}...'.format(args.geo_name))
 
 ds = ogr.Open(args.geo_name)
 features_json = list()
 precinct_counts = collections.defaultdict(lambda: collections.defaultdict(float))
+
+logging.info('Reading Census population from {}...'.format(args.census_name))
+
+with gzip.open(args.census_name, 'rt') as census_file:
+    for row in csv.DictReader(census_file):
+        geometry = dict(type='Point', coordinates=[float(row['lon']), float(row['lat'])])
+        feature_json = dict(type='Feature', geometry=geometry, properties={})
+        for (key, value) in row.items():
+            if key in ('lat', 'lon'):
+                continue
+            elif key == 'geoid':
+                feature_json['properties'][key] = value
+            else:
+                feature_json['properties'][key] = int(value)
+        features_json.append(json.dumps(feature_json, sort_keys=True))
+
+block_count = len(features_json)
+logging.info('Read population for {} blocks.'.format(block_count))
+logging.info('Reading areas from {}...'.format(args.geo_name))
 
 for feature in ds.GetLayer('counties'):
     feature_json = json.loads(feature.ExportToJson())
@@ -107,7 +126,7 @@ for layer in (ds.GetLayer('precincts'), ):
                 properties[key] = round(precinct_count + county_part, 1)
         features_json.append(json.dumps(feature_json, sort_keys=True))
 
-logging.info('Read {} areas.'.format(len(features_json)))
+logging.info('Read {} areas.'.format(len(features_json) - block_count))
 logging.info('Writing areas to {}...'.format(args.out_name))
 
 with open(args.out_name, 'w') as file3:

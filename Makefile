@@ -3,7 +3,7 @@ all: NC-Precinct-Model.NC-House.votes.geojson \
      NC-Precinct-Model.US-House.votes.geojson
 
 # Spatial votes are calculated from raw votes and geographic areas
-%.geojson: ACS-data.csv %.csv.gz
+%.geojson: ACS-data.csv Census-data.csv.gz %.csv.gz
 	./merge-layers.py NC-Geographies.gpkg NC-Votes.csv.gz $^ $@
 
 # Raw votes are calculated from Dem proportion and turnout estimates
