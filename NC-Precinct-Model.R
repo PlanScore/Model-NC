@@ -65,7 +65,7 @@ party.pc <- function(var.root, d) {
     rep <- vars[str_detect(vars, paste0(var.root, ".r"))]
     d[,paste0(var.root, ".t")] <- d[,dem] + d[,rep]
     d[,paste0(var.root, ".pc")] <- d[,dem]/(d[,dem] + d[,rep])
-    select <- (d[,paste0(var.root, ".pc")] > 0.95) | (d[,paste0(var.root, ".pc")] < 0.05)
+    select <- (d[,paste0(var.root, ".pc")] == 1) | (d[,paste0(var.root, ".pc")] == 0)
     select[is.na(select)] <- FALSE
     d[select,paste0(var.root, ".pc")] <- NA
     select <- is.na(d[,paste0(var.root, ".pc")])
@@ -94,10 +94,7 @@ for(i in 1:length(names)) { #calculate proportions for every race
   d <- party.pc(names[i], d)
 }
 d <- mutate(d, nhw=nhw/100,
-            coll=coll/100,
-            us.hse.pc=ifelse(us.hse.pc<0.05 | us.hse.pc>0.95, NA, us.hse.pc),
-            nc.hse.pc=ifelse(nc.hse.pc<0.05 | nc.hse.pc>0.95, NA, nc.hse.pc),
-            nc.sen.pc=ifelse(nc.sen.pc<0.05 | nc.sen.pc>0.95, NA, nc.sen.pc)) %>%
+            coll=coll/100) %>%
   filter(!is.na(us.pres.pc), !is.na(nhw), !is.na(coll))
 
 ############
