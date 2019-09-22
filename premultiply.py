@@ -1,45 +1,41 @@
 #!/usr/bin/env python3
-import csv, sys, statistics, gzip, argparse
+import sys, pandas, numpy, itertools, logging
 
-parser = argparse.ArgumentParser(description='Premultiply votes')
-parser.add_argument('filename1', help='Tabular CSV file with Democrat vote proportion')
-parser.add_argument('filename2', help='Tabular CSV file with estimated turnout')
-parser.add_argument('filename3', help='Output CSV file with party vote totals')
+filename1, filename2, filename3 = sys.argv[1:]
 
-args = parser.parse_args()
+logging.basicConfig(format='%(asctime)s - %(filename)s - %(message)s',
+    stream=sys.stderr, level=logging.INFO)
 
-with gzip.open(args.filename1, 'rt') as file1, gzip.open(args.filename2, 'rt') as file2:
-    rows1 = csv.reader(file1)
-    rows2 = csv.reader(file2)
-    
-    head1, head2 = next(rows1), next(rows2)
-    
-    if head1[:4] != head2[:4] or len(head1) != 1004 or len(head2) != 1004:
-        raise Exception()
-    
-    with gzip.open(args.filename3, 'wt') as file3:
-        columns = ['county', 'precinct', 'psid']
-        for i in range(1000):
-            columns += [f'DEM{i:03d}', f'REP{i:03d}']
-        
-        out = csv.writer(file3)
-        out.writerow(columns)
-        
-        for (row1, row2) in zip(rows1, rows2):
-            row = row1[1:4]
-            propDs = list(map(float, row1[4:]))
-            turnouts = list(map(float, row2[4:]))
-            
-            print(' '.join(row),
-                #'{:.3f} ±{:.3f}'.format(statistics.mean(propDs),
-                #statistics.stdev(propDs)),
-                #'{:.0f} ±{:.0f}'.format(statistics.mean(turnouts),
-                #statistics.stdev(turnouts)),
-                file=sys.stderr)
-            
-            for (propD, turnout) in zip(propDs, turnouts):
-                dem_votes = propD * turnout
-                rep_votes = turnout - dem_votes
-                row += [f'{dem_votes:.1f}', f'{rep_votes:.1f}']
-            
-            out.writerow(row)
+logging.info('Reading input files...')
+
+# Democratic vote share in file 1,
+# absolute turnout in file 2 scaled by .01 in upstream R code
+dem_share = pandas.read_csv(filename1)
+sims, rows = 1000, dem_share.shape[0]
+
+turnout = pandas.read_csv(filename2)
+turnout.iloc[:, -sims:] *= 100
+
+logging.info('Creating output frame...')
+
+# Ignore the blank first column of input to prepare votes output,
+# build an empty frame with 2x sims columns for DEM and REP votes,
+# concatenate both into a complete votes frame.
+votes1 = dem_share.iloc[:, 1:-sims]
+votes2 = pandas.DataFrame(data=numpy.empty((rows, sims*2)), dtype=float,
+    columns=[f'{party}{sim:03d}' for (sim, party)
+        in itertools.product(range(sims), ('DEM', 'REP'))])
+
+votes = pandas.concat((votes1, votes2), axis=1)
+
+# Iterate over simulations populating Democratic and Republican vote shares
+s_cols, t_cols = dem_share.columns[-sims:], turnout.columns[-sims:]
+
+for (sim, s_col, t_col) in zip(range(sims), s_cols, t_cols):
+    d_col, r_col = f'DEM{sim:03d}', f'REP{sim:03d}'
+    votes[d_col] = round(turnout[t_col] * dem_share[s_col], 1)
+    votes[r_col] = round(turnout[t_col] * (1 - dem_share[s_col]), 1)
+
+logging.info('Writing output file...')
+votes.to_csv(filename3, index=False, compression='gzip')
+logging.info('Done.')
