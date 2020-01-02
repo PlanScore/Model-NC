@@ -21,6 +21,8 @@ PlanScore.org.
 Predicted vs. Actual Vote Share, 2018
 ---
 
+![Predicted vs. actual U.S. House votes](NC_pred_v_actual_US-House.png)
+
 ![Predicted vs. actual State House votes](NC_pred_v_actual_State-House.png)
 
 ![Predicted vs. actual State Senate votes](NC_pred_v_actual_State-Senate.png)
