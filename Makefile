@@ -5,8 +5,8 @@ all: NC-Precinct-Model.NC-House.votes.geojson \
 %.geojson: ACS-data.csv Census-data.csv.gz %.csv.gz
 	./merge-layers.py NC-Geographies.gpkg $^ $@
 
-# Raw votes are calculated from Dem proportion and turnout estimates
-%.votes.csv.gz: %.open.csv.gz %.turnout.csv.gz
+# Raw votes are calculated from Dem proportion, turnout estimates, and incumbency effects
+%.votes.csv.gz: %.open.csv.gz %.turnout.csv.gz %.incD.csv.gz %.incR.csv.gz
 	./premultiply.py $^ $@
 
 # Read Census ACS data from Census Reporter by tract (140).
