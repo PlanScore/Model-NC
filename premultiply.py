@@ -51,8 +51,8 @@ for (sim, s_col, t_col, d_col, r_col) in zip(range(output_sims), s_cols, t_cols,
     open_rep_share = (1 - share_val)
     incd_dem_share = (share_val + incd_val)
     incd_rep_share = (1 - (share_val + incd_val))
-    incr_dem_share = (share_val - incr_val)
-    incr_rep_share = (1 - (share_val - incr_val))
+    incr_dem_share = (share_val + incr_val)
+    incr_rep_share = (1 - (share_val + incr_val))
     
     # Assign raw votes counts rounded to one decimal place
     votes[f'O:DEM{sim:03d}'] = round(turnout_val * open_dem_share, 1)

@@ -1,4 +1,5 @@
-all: NC-Precinct-Model.NC-House.votes.geojson \
+all: NC-Precinct-Model.US-House.votes.geojson \
+     NC-Precinct-Model.NC-House.votes.geojson \
      NC-Precinct-Model.NC-Senate.votes.geojson
 
 # Spatial votes are calculated from raw votes and geographic areas
