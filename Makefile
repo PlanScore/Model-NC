@@ -1,4 +1,6 @@
-all: NC-Precinct-Model.US-House.votes.geojson \
+all: NC-District-Model.votes.geojson
+
+old: NC-Precinct-Model.US-House.votes.geojson \
      NC-Precinct-Model.NC-House.votes.geojson \
      NC-Precinct-Model.NC-Senate.votes.geojson
 
